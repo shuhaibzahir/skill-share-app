@@ -32,24 +32,24 @@ const providerSchema = Joi.object({
   firstName: Joi.when('type', {
     is: 'individual',
     then: Joi.string().min(2).max(30).required(),
-    otherwise: Joi.string().optional()
+    otherwise: Joi.string().allow('')
   }),
   lastName: Joi.when('type', {
     is: 'individual',
     then: Joi.string().min(2).max(30).required(),
-    otherwise: Joi.string().optional()
+    otherwise: Joi.string().allow('')
   }),
 
   // Fields specific to companies
-  companyName: Joi.when('type', {
+  companyName: Joi.string().when('type', {
     is: 'company',
-    then: Joi.string().min(2).max(100).required(),
-    otherwise: Joi.string().optional()
+    then: Joi.string().required().min(2).max(100),
+    otherwise: Joi.string().allow(''),
   }),
   phoneNumber: Joi.when('type', {
     is: 'company',
-    then: Joi.string().pattern(/^[0-9]{10,15}$/).required(),
-    otherwise: Joi.string().optional()
+    then: Joi.string().required().pattern(/^[0-9]{10,15}$/),
+    otherwise: Joi.string().allow(''),
   }),
   businessTaxNumber: Joi.when('type', {
     is: 'company',
@@ -59,12 +59,7 @@ const providerSchema = Joi.object({
       .messages({
         'string.pattern.base': 'Business Tax Number must be 10 characters (A-Z, 0-9)'
       }),
-    otherwise: Joi.string().optional()
-  }),
-  representativeName: Joi.when('type', {
-    is: 'company',
-    then: fullNameSchema.required(),
-    otherwise: fullNameSchema.optional()
+    otherwise: Joi.string().allow('')
   }),
 
   // Address validation for both individual and company (optional based on type)
