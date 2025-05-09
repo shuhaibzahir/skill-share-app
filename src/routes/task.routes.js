@@ -21,15 +21,6 @@ router.route('/:id')
   .get(getTask)
   .put(authorize('user'), updateTask);
 
-router.route('/:id/progress')
-  .post(authorize('provider'), updateTaskProgress);
-
-router.route('/:id/complete')
-  .put(authorize('provider'), completeTask);
-
-router.route('/:id/acceptance')
-  .put(authorize('user'), handleTaskCompletion);
-
 router.route('/:taskId/offers')
   .get(authorize('user'), getTaskOffers);
 
