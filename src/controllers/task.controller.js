@@ -42,65 +42,12 @@ module.exports = {
   getTasks: async (req, res) => {
     try {
       let tasks;
-      
-      // If user role is 'user', get only their tasks
-      if (req.user.role === 'user') {
-        tasks = await Task.findAll({
-          where: { userId: req.user.id },
-          include: [
-            {
-              model: User,
-              as: 'provider',
-              attributes: ['id', 'firstName', 'lastName', 'email']
-            },
-            {
-              model: Offer,
-              as: 'offers',
-              include: [
-                {
-                  model: User,
-                  as: 'provider',
-                  attributes: ['id', 'firstName', 'lastName', 'email']
-                }
-              ]
-            }
-          ],
-          order: [['createdAt', 'DESC']]
-        });
-      } 
-      // If provider role, only get tasks they've made offers on and are accepted
-      else if (req.user.role === 'provider') {
-        // First get all tasks where this provider has made offers
-        const offeredTasks = await Offer.findAll({
-          where: { providerId: req.user.id },
-          attributes: ['taskId', 'status'],
-          raw: true
-        });
-        
-        const taskIds = offeredTasks.map(offer => offer.taskId);
-        
-        // Get tasks where provider has been assigned
-        tasks = await Task.findAll({
-          where: {
-            id: taskIds,
-            assignedProviderId: req.user.id
-          },
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['id', 'firstName', 'lastName', 'email']
-            },
-            {
-              model: TaskProgress,
-              as: 'progressUpdates',
-              order: [['createdAt', 'DESC']]
-            }
-          ],
-          order: [['createdAt', 'DESC']]
-        });
-      }
-
+      const isUser = req.user.role === 'user';
+      const whereCondition = isUser ?{ userId: req.user.id }: { status: 'open' };
+      tasks = await Task.findAll({
+        where: whereCondition,
+        order: [['createdAt', 'DESC']]
+      });
       res.status(200).json({
         success: true,
         count: tasks.length,
@@ -120,42 +67,17 @@ module.exports = {
   // @access  Private
   getTask: async (req, res) => {
     try {
+      const isUser = req.user.role === 'user';
+      const includeCondition = []
+      if(!isUser){
+        includeCondition.push({
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email']
+        })
+      }
       const task = await Task.findByPk(req.params.id, {
-        include: [
-          {
-            model: User,
-            as: 'user',
-            attributes: ['id', 'firstName', 'lastName', 'email']
-          },
-          {
-            model: User,
-            as: 'provider',
-            attributes: ['id', 'firstName', 'lastName', 'email']
-          },
-          {
-            model: Offer,
-            as: 'offers',
-            include: [
-              {
-                model: User,
-                as: 'provider',
-                attributes: ['id', 'firstName', 'lastName', 'email']
-              }
-            ]
-          },
-          {
-            model: TaskProgress,
-            as: 'progressUpdates',
-            include: [
-              {
-                model: User,
-                as: 'provider',
-                attributes: ['id', 'firstName', 'lastName', 'email']
-              }
-            ],
-            order: [['createdAt', 'DESC']]
-          }
-        ]
+        include: includeCondition
       });
 
       if (!task) {
@@ -165,11 +87,11 @@ module.exports = {
         });
       }
 
+      
       // Check if user is authorized to view this task
       const isTaskOwner = task.userId === req.user.id;
-      const isAssignedProvider = task.assignedProviderId === req.user.id;
       
-      if (!isTaskOwner && !isAssignedProvider) {
+      if (isUser && !isTaskOwner) {
         return res.status(403).json({
           success: false,
           message: 'Not authorized to view this task'
@@ -211,17 +133,9 @@ module.exports = {
         });
       }
 
-      // Don't allow updating if task is already assigned
-      if (task.status !== 'open') {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot update task after it has been assigned'
-        });
-      }
-
       const { 
         category, name, description, expectedStartDate, 
-        expectedHours, hourlyRate, rateCurrency 
+        expectedHours, hourlyRate, rateCurrency,status
       } = req.body;
 
       task = await task.update({
@@ -231,7 +145,8 @@ module.exports = {
         expectedStartDate: expectedStartDate || task.expectedStartDate,
         expectedHours: expectedHours || task.expectedHours,
         hourlyRate: hourlyRate || task.hourlyRate,
-        rateCurrency: rateCurrency || task.rateCurrency
+        rateCurrency: rateCurrency || task.rateCurrency,
+        status: status || task.status
       });
 
       res.status(200).json({

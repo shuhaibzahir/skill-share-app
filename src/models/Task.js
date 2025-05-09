@@ -15,7 +15,7 @@ const Task = sequelize.define("Task", {
     references: { model: "Users", key: "id" }
   },
   category: {
-    type: DataTypes.ENUM("Category1", "Category2", "Category3"),
+    type: DataTypes.ENUM("fullstack", "backend", "frontend", "mobile"), 
     allowNull: false
   },
   name: {
@@ -43,8 +43,9 @@ const Task = sequelize.define("Task", {
     allowNull: false
   },
   status: {
-    type: DataTypes.ENUM("open", "in_progress", "completed", "rejected"),
-    allowNull: false
+    type: DataTypes.ENUM("open", "closed"),
+    allowNull: false,
+    defaultValue: "open"
   }
 }, {
   timestamps: true,
